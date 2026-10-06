@@ -65,6 +65,33 @@
 html, body, #root { min-width: 320px; min-height: 100%; margin: 0; }
 button, input { font: inherit; }
 
+.leaflet-container {
+  font-family: inherit;
+  background: var(--muted);
+}
+
+.leaflet-control-zoom,
+.leaflet-control-attribution {
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-glass) !important;
+}
+
+.leaflet-control-zoom a {
+  color: var(--foreground) !important;
+  background: color-mix(in oklch, var(--card) 80%, transparent) !important;
+}
+
+.leaflet-control-zoom a:hover,
+.leaflet-control-zoom a:focus-visible {
+  background: var(--card) !important;
+}
+
+.leaflet-control-attribution {
+  border-radius: 6px 0 0 0;
+  background: color-mix(in oklch, var(--card) 78%, transparent) !important;
+  color: var(--muted-foreground);
+}
+
 @utility glass {
   background: var(--glass);
   backdrop-filter: blur(12px) saturate(140%);

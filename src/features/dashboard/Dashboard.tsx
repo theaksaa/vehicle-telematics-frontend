@@ -1,9 +1,9 @@
 import { lazy, Suspense, useState } from 'react'
-import mapLight from '../../assets/map-light.jpg'
 import { baseTrips, routePoints, vehicles } from './data/dashboardData'
 import type { DashboardMode, Trip, Vehicle } from './types'
 import { getTelemetry } from './utils/telemetry'
 import { DashboardHeader } from './components/DashboardHeader'
+import { FleetMap } from './components/FleetMap'
 import { TripSummary } from './components/TripSummary'
 import { TripsPanel } from './components/TripsPanel'
 import { VehicleDetails } from './components/VehicleDetails'
@@ -53,7 +53,7 @@ export function Dashboard() {
 
   return (
     <main className="relative h-dvh min-h-[720px] w-full overflow-hidden bg-background font-sans text-foreground">
-      <img src={mapLight} alt="Fleet map" width={1920} height={1280} className="absolute inset-0 h-full w-full object-cover" />
+      <FleetMap />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/50 via-transparent to-background/40" />
 
       <DashboardHeader mode={mode} showNavigation={Boolean(activeVehicle)} onModeChange={setMode} />
