@@ -9,6 +9,8 @@ const metrics = [
   { dataKey: 'acceleration', label: 'Acceleration', unit: 'm/s²', Icon: Zap },
 ] as const
 
+const CHART_OFFSET = 96
+
 type AnalyticsPanelProps = {
   telemetry: Telemetry[]
   sampleIndex: number
@@ -20,8 +22,8 @@ export function AnalyticsPanel({ telemetry, sampleIndex, onSampleIndexChange }: 
   const updateFromPointer = useCallback((clientX: number) => {
     const bounds = panelRef.current?.getBoundingClientRect()
     if (!bounds) return
-    const plotStart = bounds.left + 124
-    const plotWidth = Math.max(1, bounds.width - 148)
+    const plotStart = bounds.left + CHART_OFFSET
+    const plotWidth = Math.max(1, bounds.width - CHART_OFFSET)
     const ratio = Math.min(1, Math.max(0, (clientX - plotStart) / plotWidth))
     onSampleIndexChange(Math.round(ratio * (telemetry.length - 1)))
   }, [onSampleIndexChange, telemetry.length])
@@ -40,7 +42,9 @@ export function AnalyticsPanel({ telemetry, sampleIndex, onSampleIndexChange }: 
         <span className="flex items-center gap-2 text-sm font-semibold"><Activity className="h-5 w-5 text-route" strokeWidth={1.8} aria-hidden="true" />Trip analytics</span>
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />Today · <strong className="font-semibold text-foreground">{point.time}</strong></span>
       </div>
-      <div ref={panelRef} className="touch-none select-none" onPointerDown={handlePointer} onPointerMove={handlePointer} onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}>
+      <div ref={panelRef} className="touch-none select-none" onPointerDown={handlePointer} onPointerMove={handlePointer} onPointerUp={(event) => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+      }}>
         {metrics.map(({ dataKey, label, unit, Icon }, index) => (
           <TelemetryChart
             key={dataKey}

@@ -1,13 +1,3 @@
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ReferenceDot,
-  ReferenceLine,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from 'recharts'
 import type { LucideIcon } from 'lucide-react'
 import type { Telemetry } from '../types'
 
@@ -23,16 +13,21 @@ type TelemetryChartProps = {
   showTimeAxis?: boolean
 }
 
-function formatAxisValue(value: number) {
-  if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(1)}k`
-  return Number.isInteger(value) ? String(value) : value.toFixed(1)
-}
-
 export function TelemetryChart({ label, unit, dataKey, Icon, telemetry, index, showTimeAxis = false }: TelemetryChartProps) {
-  const point = telemetry[index] ?? telemetry[0]
+  const safeIndex = Math.min(Math.max(index, 0), telemetry.length - 1)
+  const point = telemetry[safeIndex]
   if (!point) return null
 
-  const value = point[dataKey]
+  const values = telemetry.map((sample) => Number.isFinite(sample[dataKey]) ? sample[dataKey] : 0)
+  const minimum = Math.min(...values)
+  const maximum = Math.max(...values)
+  const range = maximum - minimum || 1
+  const xForIndex = (sampleIndex: number) => telemetry.length === 1 ? 50 : (sampleIndex / (telemetry.length - 1)) * 100
+  const yForValue = (value: number) => 7 + (1 - (value - minimum) / range) * 26
+  const selectedX = xForIndex(safeIndex)
+  const selectedY = yForValue(values[safeIndex])
+  const linePoints = values.map((value, sampleIndex) => `${xForIndex(sampleIndex)},${yForValue(value)}`).join(' ')
+  const value = values[safeIndex]
 
   return (
     <div className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-2 border-t border-glass py-1.5 first:border-t-0" role="img" aria-label={`${label}: ${value} ${unit}`}>
@@ -46,43 +41,24 @@ export function TelemetryChart({ label, unit, dataKey, Icon, telemetry, index, s
         </div>
       </div>
 
-      <div className={showTimeAxis ? 'h-16 min-w-0' : 'h-12 min-w-0'}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={telemetry} margin={{ top: 5, right: 8, bottom: showTimeAxis ? 0 : 5, left: 0 }} accessibilityLayer>
-            <CartesianGrid vertical={false} stroke="var(--glass-border)" strokeDasharray="3 4" />
-            <XAxis
-              dataKey="time"
-              hide={!showTimeAxis}
-              axisLine={false}
-              tickLine={false}
-              interval="preserveStartEnd"
-              minTickGap={40}
-              tick={{ fill: 'var(--muted-foreground)', fontSize: 9 }}
-              height={18}
-            />
-            <YAxis
-              dataKey={dataKey}
-              axisLine={false}
-              tickLine={false}
-              tickCount={3}
-              width={34}
-              domain={['dataMin', 'dataMax']}
-              tick={{ fill: 'var(--muted-foreground)', fontSize: 9 }}
-              tickFormatter={formatAxisValue}
-            />
-            <Line
-              type="monotone"
-              dataKey={dataKey}
-              stroke="var(--route)"
-              strokeWidth={2}
-              dot={false}
-              activeDot={false}
-              isAnimationActive={false}
-            />
-            <ReferenceLine x={point.time} stroke="var(--foreground)" strokeOpacity={0.25} />
-            <ReferenceDot x={point.time} y={value} r={4} fill="var(--route)" stroke="var(--route-contrast)" strokeWidth={2} />
-          </LineChart>
-        </ResponsiveContainer>
+      <div className={`relative min-w-0 ${showTimeAxis ? 'h-16' : 'h-12'}`}>
+        <svg className="absolute inset-x-0 top-0 h-12 w-full overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="0" x2="100" y1="7" y2="7" stroke="var(--glass-border)" strokeDasharray="1 1" vectorEffect="non-scaling-stroke" />
+          <line x1="0" x2="100" y1="20" y2="20" stroke="var(--glass-border)" strokeDasharray="1 1" vectorEffect="non-scaling-stroke" />
+          <line x1="0" x2="100" y1="33" y2="33" stroke="var(--glass-border)" strokeDasharray="1 1" vectorEffect="non-scaling-stroke" />
+          <polyline points={linePoints} fill="none" stroke="var(--route)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+          <line x1={selectedX} x2={selectedX} y1="4" y2="36" stroke="var(--foreground)" strokeOpacity="0.25" vectorEffect="non-scaling-stroke" />
+        </svg>
+        <span
+          className="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-route-contrast bg-route"
+          style={{ left: `${selectedX}%`, top: `${(selectedY / 40) * 48}px` }}
+        />
+        {showTimeAxis && (
+          <span className="absolute inset-x-0 bottom-0 flex justify-between text-[9px] text-muted-foreground">
+            <span>{telemetry[0]?.time}</span>
+            <span>{telemetry[telemetry.length - 1]?.time}</span>
+          </span>
+        )}
       </div>
     </div>
   )
