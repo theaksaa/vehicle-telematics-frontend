@@ -1,6 +1,7 @@
 import { CalendarDays, Clock3, Flag, MapPin, Navigation, Route, Timer } from 'lucide-react'
 import type { TelemetryPoint, Trip } from '../types'
 import { calculateDistance, formatDate, formatDuration, formatTime } from '../utils/format'
+import { getPlaybackPosition } from '../utils/playback'
 import { LocationLabel } from './LocationLabel'
 
 type TripSummaryProps = {
@@ -12,9 +13,7 @@ type TripSummaryProps = {
 
 export function TripSummary({ trip, telemetry, sampleIndex, onSampleIndexChange }: TripSummaryProps) {
   const distance = calculateDistance(telemetry)
-  const maximumIndex = Math.max(0, telemetry.length - 1)
-  const safeIndex = Math.min(Math.max(sampleIndex, 0), maximumIndex)
-  const progress = maximumIndex === 0 ? (telemetry.length === 1 ? 100 : 0) : (safeIndex / maximumIndex) * 100
+  const { maximumIndex, safeIndex, progress } = getPlaybackPosition(telemetry.length, sampleIndex)
 
   return (
     <section className="glass absolute bottom-3 left-1/2 z-30 w-[min(620px,calc(100%-1.5rem))] -translate-x-1/2 rounded-3xl px-5 py-4 sm:bottom-6">

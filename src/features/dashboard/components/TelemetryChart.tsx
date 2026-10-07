@@ -1,33 +1,27 @@
 import type { LucideIcon } from 'lucide-react'
-import type { Telemetry } from '../types'
-
-type MetricKey = 'speed' | 'rpm' | 'acceleration'
 
 type TelemetryChartProps = {
   label: string
   unit: string
-  dataKey: MetricKey
   Icon: LucideIcon
-  telemetry: Telemetry[]
+  values: number[]
   index: number
+  startTime?: string
+  endTime?: string
   showTimeAxis?: boolean
 }
 
-export function TelemetryChart({ label, unit, dataKey, Icon, telemetry, index, showTimeAxis = false }: TelemetryChartProps) {
-  const safeIndex = Math.min(Math.max(index, 0), telemetry.length - 1)
-  const point = telemetry[safeIndex]
-  if (!point) return null
-
-  const values = telemetry.map((sample) => Number.isFinite(sample[dataKey]) ? sample[dataKey] : 0)
+export function TelemetryChart({ label, unit, Icon, values, index, startTime, endTime, showTimeAxis = false }: TelemetryChartProps) {
+  if (values.length === 0) return null
   const minimum = Math.min(...values)
   const maximum = Math.max(...values)
   const range = maximum - minimum || 1
-  const xForIndex = (sampleIndex: number) => telemetry.length === 1 ? 50 : (sampleIndex / (telemetry.length - 1)) * 100
+  const xForIndex = (sampleIndex: number) => values.length === 1 ? 50 : (sampleIndex / (values.length - 1)) * 100
   const yForValue = (value: number) => 7 + (1 - (value - minimum) / range) * 26
-  const selectedX = xForIndex(safeIndex)
-  const selectedY = yForValue(values[safeIndex])
+  const selectedX = xForIndex(index)
+  const selectedY = yForValue(values[index])
   const linePoints = values.map((value, sampleIndex) => `${xForIndex(sampleIndex)},${yForValue(value)}`).join(' ')
-  const value = values[safeIndex]
+  const value = values[index]
 
   return (
     <div className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-2 border-t border-glass py-1.5 first:border-t-0" role="img" aria-label={`${label}: ${value} ${unit}`}>
@@ -55,8 +49,8 @@ export function TelemetryChart({ label, unit, dataKey, Icon, telemetry, index, s
         />
         {showTimeAxis && (
           <span className="absolute inset-x-0 bottom-0 flex justify-between text-[9px] text-muted-foreground">
-            <span>{telemetry[0]?.time}</span>
-            <span>{telemetry[telemetry.length - 1]?.time}</span>
+            <span>{startTime}</span>
+            <span>{endTime}</span>
           </span>
         )}
       </div>

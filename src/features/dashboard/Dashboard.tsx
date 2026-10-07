@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ApiError, getTrip, getTripTelemetry, getVehicles, getVehicleTrips } from './api'
-import type { DashboardMode, TelemetryPoint, Trip, Vehicle } from './types'
+import { useMemo, useState } from 'react'
+import type { DashboardMode, Trip, Vehicle } from './types'
 import { toChartTelemetry } from './utils/format'
+import { useTripPlayback } from './hooks/useTripPlayback'
+import { useVehicleTrips } from './hooks/useVehicleTrips'
+import { useVehicles } from './hooks/useVehicles'
 import { DashboardHeader } from './components/DashboardHeader'
 import { AnalyticsPanel } from './components/AnalyticsPanel'
 import { FleetMap } from './components/FleetMap'
@@ -16,84 +18,26 @@ type DashboardProps = {
 
 const reloadOnUnauthorized = () => window.location.reload()
 
-function errorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
-}
-
 export function Dashboard({ onUnauthorized = reloadOnUnauthorized }: DashboardProps = {}) {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([])
-  const [vehiclesLoading, setVehiclesLoading] = useState(true)
-  const [vehiclesError, setVehiclesError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [panel, setPanel] = useState<'vehicles' | 'trips'>('vehicles')
-  const [trips, setTrips] = useState<Trip[]>([])
-  const [tripsLoading, setTripsLoading] = useState(false)
-  const [tripsError, setTripsError] = useState<string | null>(null)
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
-  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
-  const [tripTelemetry, setTripTelemetry] = useState<TelemetryPoint[]>([])
-  const [tripLoading, setTripLoading] = useState(false)
-  const [tripError, setTripError] = useState<string | null>(null)
   const [mode, setMode] = useState<DashboardMode>('tracking')
-  const [sampleIndex, setSampleIndex] = useState(0)
   const [query, setQuery] = useState('')
-
-  useEffect(() => {
-    let cancelled = false
-    getVehicles()
-      .then((data) => {
-        if (!cancelled) setVehicles(data)
-      })
-      .catch((error: unknown) => {
-        if (error instanceof ApiError && error.status === 401) onUnauthorized()
-        else if (!cancelled) setVehiclesError(errorMessage(error, 'Could not load vehicles.'))
-      })
-      .finally(() => {
-        if (!cancelled) setVehiclesLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [onUnauthorized])
-
-  useEffect(() => {
-    if (selectedId == null) return
-    let cancelled = false
-    getVehicleTrips(selectedId)
-      .then((page) => {
-        if (!cancelled) setTrips(page.content)
-      })
-      .catch((error: unknown) => {
-        if (error instanceof ApiError && error.status === 401) onUnauthorized()
-        else if (!cancelled) setTripsError(errorMessage(error, 'Could not load trips.'))
-      })
-      .finally(() => {
-        if (!cancelled) setTripsLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [onUnauthorized, selectedId])
-
-  useEffect(() => {
-    if (selectedTripId == null) return
-    let cancelled = false
-    Promise.all([getTrip(selectedTripId), getTripTelemetry(selectedTripId)])
-      .then(([trip, telemetry]) => {
-        if (cancelled) return
-        setSelectedTrip(trip)
-        setTripTelemetry(telemetry.content)
-        setSampleIndex(Math.max(0, telemetry.content.length - 1))
-      })
-      .catch((error: unknown) => {
-        if (error instanceof ApiError && error.status === 401) onUnauthorized()
-        else if (!cancelled) setTripError(errorMessage(error, 'Could not open this trip.'))
-      })
-      .finally(() => {
-        if (!cancelled) setTripLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [onUnauthorized, selectedTripId])
+  const { vehicles, loading: vehiclesLoading, error: vehiclesError } = useVehicles(onUnauthorized)
+  const { trips, loading: tripsLoading, error: tripsError } = useVehicleTrips(selectedId, onUnauthorized)
+  const {
+    trip: selectedTrip,
+    telemetry: tripTelemetry,
+    loading: tripLoading,
+    error: tripError,
+    sampleIndex,
+    setSampleIndex,
+    selectedSample: selectedTelemetry,
+  } = useTripPlayback(selectedTripId, onUnauthorized)
 
   const activeVehicle = vehicles.find((vehicle) => vehicle.id === selectedId)
   const chartTelemetry = useMemo(() => toChartTelemetry(tripTelemetry), [tripTelemetry])
-  const selectedTelemetry = tripTelemetry[sampleIndex] ?? tripTelemetry[tripTelemetry.length - 1]
   const filteredVehicles = vehicles.filter((vehicle) =>
     `${vehicle.manufacturer} ${vehicle.model} ${vehicle.registration}`.toLowerCase().includes(query.toLowerCase()),
   )
@@ -102,22 +46,12 @@ export function Dashboard({ onUnauthorized = reloadOnUnauthorized }: DashboardPr
     if (vehicle.id === selectedId && panel === 'trips') return
     setSelectedId(vehicle.id)
     setPanel('trips')
-    setTrips([])
-    setTripsError(null)
-    setTripsLoading(true)
     setSelectedTripId(null)
-    setSelectedTrip(null)
-    setTripTelemetry([])
-    setTripError(null)
     setMode('tracking')
   }
 
   const selectTrip = (trip: Trip) => {
     if (trip.id === selectedTripId) return
-    setSelectedTrip(null)
-    setTripTelemetry([])
-    setTripError(null)
-    setTripLoading(true)
     setSelectedTripId(trip.id)
     setMode('tracking')
   }
@@ -125,8 +59,6 @@ export function Dashboard({ onUnauthorized = reloadOnUnauthorized }: DashboardPr
   const deselectVehicle = () => {
     setSelectedId(null)
     setSelectedTripId(null)
-    setSelectedTrip(null)
-    setTripTelemetry([])
     setPanel('vehicles')
     setMode('tracking')
   }

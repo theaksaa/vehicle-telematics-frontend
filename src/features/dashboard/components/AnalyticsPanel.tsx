@@ -1,7 +1,10 @@
-import { useCallback, useRef, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useMemo, useRef, type PointerEvent as ReactPointerEvent } from 'react'
 import { Activity, CalendarDays, Gauge, RefreshCw, Zap } from 'lucide-react'
 import type { Telemetry } from '../types'
+import { getPlaybackPosition } from '../utils/playback'
 import { TelemetryChart } from './TelemetryChart'
+
+type MetricKey = 'speed' | 'rpm' | 'acceleration'
 
 const metrics = [
   { dataKey: 'speed', label: 'Speed', unit: 'km/h', Icon: Gauge },
@@ -19,21 +22,28 @@ type AnalyticsPanelProps = {
 
 export function AnalyticsPanel({ telemetry, sampleIndex, onSampleIndexChange }: AnalyticsPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
+  const { maximumIndex, safeIndex } = getPlaybackPosition(telemetry.length, sampleIndex)
+  const series = useMemo<Record<MetricKey, number[]>>(() => ({
+    speed: telemetry.map((sample) => Number.isFinite(sample.speed) ? sample.speed : 0),
+    rpm: telemetry.map((sample) => Number.isFinite(sample.rpm) ? sample.rpm : 0),
+    acceleration: telemetry.map((sample) => Number.isFinite(sample.acceleration) ? sample.acceleration : 0),
+  }), [telemetry])
+
   const updateFromPointer = useCallback((clientX: number) => {
     const bounds = panelRef.current?.getBoundingClientRect()
     if (!bounds) return
     const plotStart = bounds.left + CHART_OFFSET
     const plotWidth = Math.max(1, bounds.width - CHART_OFFSET)
     const ratio = Math.min(1, Math.max(0, (clientX - plotStart) / plotWidth))
-    onSampleIndexChange(Math.round(ratio * (telemetry.length - 1)))
-  }, [onSampleIndexChange, telemetry.length])
+    onSampleIndexChange(Math.round(ratio * maximumIndex))
+  }, [maximumIndex, onSampleIndexChange])
 
   const handlePointer = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.type === 'pointerdown') event.currentTarget.setPointerCapture(event.pointerId)
     if (event.type !== 'pointermove' || event.buttons > 0 || event.pointerType === 'mouse') updateFromPointer(event.clientX)
   }
 
-  const point = telemetry[sampleIndex] ?? telemetry[0]
+  const point = telemetry[safeIndex]
   if (!point) return null
 
   return (
@@ -48,17 +58,18 @@ export function AnalyticsPanel({ telemetry, sampleIndex, onSampleIndexChange }: 
         {metrics.map(({ dataKey, label, unit, Icon }, index) => (
           <TelemetryChart
             key={dataKey}
-            dataKey={dataKey}
             label={label}
             unit={unit}
             Icon={Icon}
-            telemetry={telemetry}
-            index={sampleIndex}
+            values={series[dataKey]}
+            index={safeIndex}
+            startTime={telemetry[0]?.time}
+            endTime={telemetry[telemetry.length - 1]?.time}
             showTimeAxis={index === 2}
           />
         ))}
       </div>
-      <input aria-label="Trip timeline" type="range" min={0} max={telemetry.length - 1} value={sampleIndex} onChange={(event) => onSampleIndexChange(Number(event.target.value))} className="sr-only" />
+      <input aria-label="Trip timeline" type="range" min={0} max={maximumIndex} value={safeIndex} onChange={(event) => onSampleIndexChange(Number(event.target.value))} className="sr-only" />
     </section>
   )
 }
