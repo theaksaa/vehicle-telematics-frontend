@@ -49,8 +49,14 @@ function distanceBetween(a: TelemetryPoint, b: TelemetryPoint) {
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine))
 }
 
-export function calculateDistance(points: TelemetryPoint[]) {
-  return points.slice(1).reduce((total, point, index) => total + distanceBetween(points[index], point), 0)
+export function calculateCumulativeDistances(points: TelemetryPoint[]) {
+  const distances = new Array<number>(points.length)
+  if (points.length === 0) return distances
+  distances[0] = 0
+  for (let index = 1; index < points.length; index += 1) {
+    distances[index] = distances[index - 1] + distanceBetween(points[index - 1], points[index])
+  }
+  return distances
 }
 
 export function toChartTelemetry(points: TelemetryPoint[]): Telemetry[] {

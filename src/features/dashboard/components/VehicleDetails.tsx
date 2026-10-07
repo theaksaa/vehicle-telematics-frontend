@@ -13,7 +13,7 @@ type VehicleDetailsProps = {
 export function VehicleDetails({ vehicle, trip, sample }: VehicleDetailsProps) {
   return (
     <section className="glass absolute right-6 top-24 z-30 hidden w-[320px] rounded-3xl p-4 lg:block">
-      <VehicleHeader vehicle={vehicle} trip={trip} sample={sample} />
+      <VehicleHeader vehicle={vehicle} trip={trip} />
       {trip ? (
         <TripPlaybackDetails vehicle={vehicle} sample={sample} />
       ) : vehicle.state?.online ? (

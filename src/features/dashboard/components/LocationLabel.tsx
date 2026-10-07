@@ -6,11 +6,12 @@ type LocationLabelProps = {
   longitude?: number | null
   className?: string
   emptyLabel?: string
+  debounceMs?: number
 }
 
-export function LocationLabel({ latitude, longitude, className, emptyLabel }: LocationLabelProps) {
+export function LocationLabel({ latitude, longitude, className, emptyLabel, debounceMs = 0 }: LocationLabelProps) {
   const fallback = latitude == null || longitude == null ? emptyLabel ?? formatCoordinate(latitude, longitude) : formatCoordinate(latitude, longitude)
-  const { location, loading } = useReverseGeocoding(latitude, longitude)
+  const { location, loading } = useReverseGeocoding(latitude, longitude, debounceMs)
   const label = loading ? 'Resolving location…' : location ?? fallback
   return <span className={className} title={location ?? fallback}>{label}</span>
 }

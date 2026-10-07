@@ -37,7 +37,7 @@ function resolveLocation(latitude: number, longitude: number) {
   return request
 }
 
-export function useReverseGeocoding(latitude?: number | null, longitude?: number | null) {
+export function useReverseGeocoding(latitude?: number | null, longitude?: number | null, debounceMs = 0) {
   const key = latitude != null && longitude != null ? coordinateKey(latitude, longitude) : null
   const [resolved, setResolved] = useState<{ key: string; location: string | null } | null>(null)
 
@@ -45,12 +45,17 @@ export function useReverseGeocoding(latitude?: number | null, longitude?: number
     if (latitude == null || longitude == null || key == null) return
     let cancelled = false
 
-    resolveLocation(latitude, longitude).then((location) => {
-      if (!cancelled) setResolved({ key, location })
-    })
+    const timeoutId = window.setTimeout(() => {
+      resolveLocation(latitude, longitude).then((location) => {
+        if (!cancelled) setResolved({ key, location })
+      })
+    }, debounceMs)
 
-    return () => { cancelled = true }
-  }, [key, latitude, longitude])
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeoutId)
+    }
+  }, [debounceMs, key, latitude, longitude])
 
   return {
     location: resolved?.key === key ? resolved.location : null,

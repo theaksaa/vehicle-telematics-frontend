@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useRef, type PointerEvent as ReactPointerEvent } from 'react'
+import { useMemo } from 'react'
 import { Activity, CalendarDays, Gauge, RefreshCw, Zap } from 'lucide-react'
 import type { Telemetry } from '../types'
 import { getPlaybackPosition } from '../utils/playback'
+import { usePointerScrubber } from '../hooks/usePointerScrubber'
 import { TelemetryChart } from './TelemetryChart'
 
 type MetricKey = 'speed' | 'rpm' | 'acceleration'
@@ -21,7 +22,6 @@ type AnalyticsPanelProps = {
 }
 
 export function AnalyticsPanel({ telemetry, sampleIndex, onSampleIndexChange }: AnalyticsPanelProps) {
-  const panelRef = useRef<HTMLDivElement>(null)
   const { maximumIndex, safeIndex } = getPlaybackPosition(telemetry.length, sampleIndex)
   const series = useMemo<Record<MetricKey, number[]>>(() => ({
     speed: telemetry.map((sample) => Number.isFinite(sample.speed) ? sample.speed : 0),
@@ -29,19 +29,11 @@ export function AnalyticsPanel({ telemetry, sampleIndex, onSampleIndexChange }: 
     acceleration: telemetry.map((sample) => Number.isFinite(sample.acceleration) ? sample.acceleration : 0),
   }), [telemetry])
 
-  const updateFromPointer = useCallback((clientX: number) => {
-    const bounds = panelRef.current?.getBoundingClientRect()
-    if (!bounds) return
-    const plotStart = bounds.left + CHART_OFFSET
-    const plotWidth = Math.max(1, bounds.width - CHART_OFFSET)
-    const ratio = Math.min(1, Math.max(0, (clientX - plotStart) / plotWidth))
-    onSampleIndexChange(Math.round(ratio * maximumIndex))
-  }, [maximumIndex, onSampleIndexChange])
-
-  const handlePointer = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.type === 'pointerdown') event.currentTarget.setPointerCapture(event.pointerId)
-    if (event.type !== 'pointermove' || event.buttons > 0 || event.pointerType === 'mouse') updateFromPointer(event.clientX)
-  }
+  const { scrubberRef, onPointerDown, onPointerMove, onPointerUp } = usePointerScrubber({
+    itemCount: telemetry.length,
+    onIndexChange: onSampleIndexChange,
+    leftInset: CHART_OFFSET,
+  })
 
   const point = telemetry[safeIndex]
   if (!point) return null
@@ -52,9 +44,7 @@ export function AnalyticsPanel({ telemetry, sampleIndex, onSampleIndexChange }: 
         <span className="flex items-center gap-2 text-sm font-semibold"><Activity className="h-5 w-5 text-route" strokeWidth={1.8} aria-hidden="true" />Trip analytics</span>
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />Today · <strong className="font-semibold text-foreground">{point.time}</strong></span>
       </div>
-      <div ref={panelRef} className="touch-none select-none" onPointerDown={handlePointer} onPointerMove={handlePointer} onPointerUp={(event) => {
-        if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
-      }}>
+      <div ref={scrubberRef} className="touch-none select-none" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
         {metrics.map(({ dataKey, label, unit, Icon }, index) => (
           <TelemetryChart
             key={dataKey}

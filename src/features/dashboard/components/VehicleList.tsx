@@ -11,16 +11,18 @@ type VehicleListProps = {
   error: string | null
   onQueryChange: (value: string) => void
   onVehicleSelect: (vehicle: Vehicle) => void
+  variant?: 'card' | 'fullscreen'
 }
 
-export function VehicleList({ vehicles, selectedId, query, loading, error, onQueryChange, onVehicleSelect }: VehicleListProps) {
+export function VehicleList({ vehicles, selectedId, query, loading, error, onQueryChange, onVehicleSelect, variant = 'card' }: VehicleListProps) {
   const onlineCount = vehicles.filter((vehicle) => vehicle.state?.online).length
   const offlineCount = vehicles.length - onlineCount
+  const fullscreen = variant === 'fullscreen'
 
   return (
-    <div className="animate-fade-in">
+    <div className={`animate-fade-in ${fullscreen ? 'flex min-h-0 flex-1 flex-col' : ''}`}>
       <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold">Vehicles</h2>
+        {!fullscreen && <h2 className="text-sm font-semibold">Vehicles</h2>}
         <span className="text-xs text-muted-foreground">{onlineCount} online · {offlineCount} offline</span>
       </div>
       <input
@@ -29,7 +31,7 @@ export function VehicleList({ vehicles, selectedId, query, loading, error, onQue
         placeholder="Search vehicle or plate"
         className="mt-3 w-full rounded-xl border border-glass bg-card/70 px-3 py-2 text-xs outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
       />
-      <ul className="glass-scrollbar mt-3 max-h-[46vh] space-y-1 overflow-y-auto">
+      <ul className={`glass-scrollbar mt-3 space-y-1 overflow-y-auto ${fullscreen ? 'max-h-none flex-1 pb-4' : 'max-h-[46vh]'}`}>
         {loading && <li className="px-3 py-6 text-center text-xs text-muted-foreground">Loading vehicles…</li>}
         {error && <li className="rounded-xl bg-danger/10 px-3 py-3 text-xs text-danger">{error}</li>}
         {!loading && !error && vehicles.length === 0 && <li className="px-3 py-6 text-center text-xs text-muted-foreground">No vehicles found.</li>}

@@ -11,18 +11,20 @@ type TripsPanelProps = {
   error: string | null
   onBack: () => void
   onTripSelect: (trip: Trip) => void
+  variant?: 'card' | 'fullscreen'
 }
 
-export function TripsPanel({ trips, selectedTripId, loading, error, onBack, onTripSelect }: TripsPanelProps) {
+export function TripsPanel({ trips, selectedTripId, loading, error, onBack, onTripSelect, variant = 'card' }: TripsPanelProps) {
+  const fullscreen = variant === 'fullscreen'
   return (
-    <div className="animate-fade-in">
-      <div className="flex h-5 items-center gap-1.5">
-        <Button variant="ghost" size="icon" onClick={onBack} className="h-5 w-5 rounded-full [&_svg]:size-3.5" aria-label="Deselect vehicle and return to vehicles">
-          <ArrowLeft />
-        </Button>
+    <div className={`animate-fade-in ${fullscreen ? 'flex min-h-0 flex-1 flex-col' : ''}`}>
+      {!fullscreen && <div className="flex h-5 items-center gap-1.5">
+          <Button variant="ghost" size="icon" onClick={onBack} className="h-5 w-5 rounded-full [&_svg]:size-3.5" aria-label="Deselect vehicle and return to vehicles">
+            <ArrowLeft />
+          </Button>
         <h2 className="text-sm font-semibold">Trips</h2>
-      </div>
-      <ul className="glass-scrollbar mt-3 max-h-[52vh] space-y-2 overflow-y-auto">
+      </div>}
+      <ul className={`glass-scrollbar mt-3 space-y-2 overflow-y-auto ${fullscreen ? 'max-h-none flex-1 pb-4' : 'max-h-[52vh]'}`}>
         {loading && <li className="px-3 py-6 text-center text-xs text-muted-foreground">Loading trips…</li>}
         {error && <li className="rounded-xl bg-danger/10 px-3 py-3 text-xs text-danger">{error}</li>}
         {!loading && !error && trips.length === 0 && <li className="px-3 py-6 text-center text-xs text-muted-foreground">This vehicle has no trips yet.</li>}
