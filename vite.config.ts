@@ -14,6 +14,11 @@ export default defineConfig(({ mode }) => {
           target: env.BACKEND_URL || 'http://localhost:8080',
           changeOrigin: true,
         },
+        '/ws': {
+          target: env.BACKEND_URL || 'http://localhost:8080',
+          changeOrigin: true,
+          ws: true,
+        },
       },
     },
   }

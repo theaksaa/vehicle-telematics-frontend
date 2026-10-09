@@ -25,6 +25,11 @@ export function useDashboardSelection() {
     setMode('tracking')
   }
 
+  const followLiveTrip = () => {
+    setSelectedTripId(null)
+    setMode('tracking')
+  }
+
   const selectVehicleFromPanel = (vehicle: Vehicle) => {
     selectVehicle(vehicle)
     setSelectionPanel('trips')
@@ -57,6 +62,7 @@ export function useDashboardSelection() {
     setSelectionPanel,
     selectVehicle,
     selectTrip,
+    followLiveTrip,
     selectVehicleFromPanel,
     selectTripFromPanel,
     deselectVehicle,

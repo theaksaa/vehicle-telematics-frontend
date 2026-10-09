@@ -17,7 +17,7 @@ export function VehicleDetails({ vehicle, trip, sample }: VehicleDetailsProps) {
       {trip ? (
         <TripPlaybackDetails vehicle={vehicle} sample={sample} />
       ) : vehicle.state?.online ? (
-        <LiveVehicleDetails vehicle={vehicle} />
+        <LiveVehicleDetails vehicle={vehicle} sample={sample} />
       ) : (
         <OfflineVehicleDetails vehicle={vehicle} />
       )}

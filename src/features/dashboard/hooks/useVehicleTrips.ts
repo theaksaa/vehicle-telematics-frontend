@@ -16,7 +16,7 @@ export function useVehicleTrips(vehicleId: number | null, onUnauthorized: () => 
     if (vehicleId == null) return
     let cancelled = false
 
-    getVehicleTrips(vehicleId)
+    const load = () => getVehicleTrips(vehicleId)
       .then((page) => {
         if (!cancelled) setResult({ vehicleId, trips: page.content, error: null })
       })
@@ -25,7 +25,13 @@ export function useVehicleTrips(vehicleId: number | null, onUnauthorized: () => 
         if (!cancelled && message) setResult({ vehicleId, trips: [], error: message })
       })
 
-    return () => { cancelled = true }
+    void load()
+    const interval = window.setInterval(load, 5_000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
   }, [onUnauthorized, vehicleId])
 
   const currentResult = result?.vehicleId === vehicleId ? result : null

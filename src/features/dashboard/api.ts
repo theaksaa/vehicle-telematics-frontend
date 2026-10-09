@@ -45,6 +45,10 @@ export async function getVehicles(): Promise<Vehicle[]> {
   )
 }
 
+export function getVehicleState(vehicleId: number) {
+  return request<VehicleState>(`/api/vehicles/${vehicleId}/state`, { cache: 'no-store' })
+}
+
 export function getVehicleTrips(vehicleId: number) {
   return request<PageResponse<Trip>>(`/api/vehicles/${vehicleId}/trips?size=100`)
 }
@@ -55,6 +59,26 @@ export function getTrip(tripId: number) {
 
 export function getTripTelemetry(tripId: number) {
   return request<PageResponse<TelemetryPoint>>(`/api/trips/${tripId}/telemetry?size=1000`)
+}
+
+export async function getLatestVehicleTelemetry(vehicleId: number) {
+  const page = await request<PageResponse<TelemetryPoint>>(`/api/vehicles/${vehicleId}/telemetry?size=1`, { cache: 'no-store' })
+  return page.content[0] ?? null
+}
+
+export async function getAllTripTelemetry(tripId: number) {
+  const points: TelemetryPoint[] = []
+  let page = 0
+  let totalPages = 1
+
+  while (page < totalPages) {
+    const response = await request<PageResponse<TelemetryPoint>>(`/api/trips/${tripId}/telemetry?size=1000&page=${page}`, { cache: 'no-store' })
+    points.push(...response.content)
+    totalPages = response.totalPages
+    page += 1
+  }
+
+  return points
 }
 
 export function reverseGeocode(latitude: number, longitude: number) {

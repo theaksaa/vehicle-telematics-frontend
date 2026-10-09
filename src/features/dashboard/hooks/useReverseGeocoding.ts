@@ -58,7 +58,8 @@ export function useReverseGeocoding(latitude?: number | null, longitude?: number
   }, [debounceMs, key, latitude, longitude])
 
   return {
-    location: resolved?.key === key ? resolved.location : null,
+    // Keep the last resolved label visible while the next coordinate is resolving.
+    location: resolved?.location ?? null,
     loading: key != null && resolved?.key !== key,
   }
 }

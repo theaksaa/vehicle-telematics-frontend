@@ -9,23 +9,39 @@ type MapViewportControllerProps = {
   selectedVehicleId: number | null
   selectedTripId: number | null
   telemetry: TelemetryPoint[]
+  live: boolean
+  livePosition?: [number, number]
 }
 
-export function MapViewportController({ vehicles, selectedVehicleId, selectedTripId, telemetry }: MapViewportControllerProps) {
+export function MapViewportController({ vehicles, selectedVehicleId, selectedTripId, telemetry, live, livePosition }: MapViewportControllerProps) {
   const map = useMap()
   const fleetPositioned = useRef(false)
   const lastRouteKey = useRef('')
   const lastCenteredVehicleId = useRef<number | null>(null)
+  const lastLivePosition = useRef('')
 
   useEffect(() => {
     const route = toRoutePositions(telemetry)
+    const selectedVehicle = vehicles.find((vehicle) => vehicle.id === selectedVehicleId)
 
-    if (selectedTripId == null) lastRouteKey.current = ''
+    if (live && livePosition) {
+      const position: LatLngExpression = livePosition
+      const positionKey = `${livePosition[0]}:${livePosition[1]}`
+      if (positionKey !== lastLivePosition.current) {
+        map.panTo(position, { animate: true })
+        lastLivePosition.current = positionKey
+      }
+      return
+    }
+
+    lastLivePosition.current = ''
+
+    if (selectedTripId == null && !live) lastRouteKey.current = ''
 
     if (selectedTripId != null && route.length > 0) {
       const first = route[0]
       const last = route[route.length - 1]
-      const routeKey = `${selectedTripId}-${first.join(',')}-${last.join(',')}-${route.length}`
+      const routeKey = `${selectedTripId ?? 'live'}-${first.join(',')}-${last.join(',')}-${route.length}`
 
       if (routeKey !== lastRouteKey.current) {
         if (route.length > 1) map.fitBounds(route as LatLngBoundsExpression, { padding: [80, 80], maxZoom: 15 })
@@ -35,7 +51,6 @@ export function MapViewportController({ vehicles, selectedVehicleId, selectedTri
       return
     }
 
-    const selectedVehicle = vehicles.find((vehicle) => vehicle.id === selectedVehicleId)
     if (
       selectedVehicleId != null
       && selectedVehicleId !== lastCenteredVehicleId.current
@@ -61,7 +76,7 @@ export function MapViewportController({ vehicles, selectedVehicleId, selectedTri
       map.setView(vehiclePositions[0], 14)
       fleetPositioned.current = true
     }
-  }, [map, selectedTripId, selectedVehicleId, telemetry, vehicles])
+  }, [live, livePosition, map, selectedTripId, selectedVehicleId, telemetry, vehicles])
 
   return null
 }

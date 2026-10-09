@@ -14,6 +14,7 @@ type TripSummaryProps = {
 }
 
 export function TripSummary({ trip, telemetry, sampleIndex, onSampleIndexChange }: TripSummaryProps) {
+  const live = trip.status === 'OPEN'
   const { maximumIndex, safeIndex, progress } = getPlaybackPosition(telemetry.length, sampleIndex)
   const currentSample = telemetry[safeIndex]
   const currentTimestamp = currentSample?.recordedAt ?? trip.startedAt
@@ -29,7 +30,7 @@ export function TripSummary({ trip, telemetry, sampleIndex, onSampleIndexChange 
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <Navigation className="h-5 w-5 shrink-0 text-route" strokeWidth={1.8} aria-hidden="true" />
-          <p className="truncate text-sm font-semibold">Trip #{trip.id}</p>
+          <p className="truncate text-sm font-semibold">{live ? 'Live tracking' : `Trip #${trip.id}`}</p>
         </div>
         <span className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${trip.status === 'OPEN' ? 'bg-online/10 text-online' : 'bg-muted text-muted-foreground'}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${trip.status === 'OPEN' ? 'bg-online' : 'bg-offline'}`} />
@@ -44,36 +45,33 @@ export function TripSummary({ trip, telemetry, sampleIndex, onSampleIndexChange 
         <span className="flex items-center gap-1.5"><Timer className="h-3.5 w-3.5" aria-hidden="true" />{formatDuration(trip.startedAt, currentTimestamp)}</span>
       </div>
 
-      <div
-        ref={scrubberRef}
-        className="relative my-1 h-8 touch-none select-none"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-      >
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-offline/55" />
-        <div className="pointer-events-none absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-route" style={{ width: `${progress}%` }} />
-        <span className="pointer-events-none absolute left-0 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-route-contrast bg-route" />
-        <span
-          className="pointer-events-none absolute top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-route-contrast bg-route shadow-[0_4px_12px_-2px_var(--route)]"
-          style={{ left: `${progress}%` }}
-        />
-      </div>
-
-      <input
-        type="range"
-        min={0}
-        max={maximumIndex}
-        value={safeIndex}
-        disabled={telemetry.length < 2}
-        onChange={(event) => onSampleIndexChange(Number(event.target.value))}
-        className="sr-only"
-        aria-label="Trip playback position"
-      />
+      {live ? (
+        <div className="relative my-1 h-8" aria-label="Live trip in progress">
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 border-t-2 border-dashed border-route/70" />
+          <span className="pointer-events-none absolute left-0 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-route-contrast bg-route" />
+          <span className="pointer-events-none absolute right-0 top-1/2 h-[18px] w-[18px] translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full border-[3px] border-route-contrast bg-online shadow-[0_4px_12px_-2px_var(--route)]" />
+        </div>
+      ) : (
+        <>
+          <div
+            ref={scrubberRef}
+            className="relative my-1 h-8 touch-none select-none"
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+          >
+            <div className="pointer-events-none absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-offline/55" />
+            <div className="pointer-events-none absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-route" style={{ width: `${progress}%` }} />
+            <span className="pointer-events-none absolute left-0 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-route-contrast bg-route" />
+            <span className="pointer-events-none absolute top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-route-contrast bg-route shadow-[0_4px_12px_-2px_var(--route)]" style={{ left: `${progress}%` }} />
+          </div>
+          <input type="range" min={0} max={maximumIndex} value={safeIndex} disabled={telemetry.length < 2} onChange={(event) => onSampleIndexChange(Number(event.target.value))} className="sr-only" aria-label="Trip playback position" />
+        </>
+      )}
 
       <div className="grid grid-cols-2 items-center gap-3 text-[11px] text-muted-foreground">
         <span className="flex min-w-0 items-center gap-1.5"><MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><LocationLabel latitude={trip.startLatitude} longitude={trip.startLongitude} className="truncate" /></span>
-        <span className="flex min-w-0 items-center justify-end gap-1.5"><Flag className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /><LocationLabel latitude={trip.endLatitude} longitude={trip.endLongitude} className="truncate text-right" /></span>
+        <span className="flex min-w-0 items-center justify-end gap-1.5"><Flag className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{live ? <span>—</span> : <LocationLabel latitude={trip.endLatitude} longitude={trip.endLongitude} className="truncate text-right" />}</span>
       </div>
     </section>
   )
